@@ -66,11 +66,11 @@ var Data = (function () {
   function stored(key) { try { return JSON.parse(localStorage.getItem('fmtv.' + key)); } catch (e) { return null; } }
 
   /** GET a JSON document; done(error, json). */
-  function get(url, headers, done) {
+  function get(url, headers, done, timeout) {
     var x = new XMLHttpRequest();
     var over = false;
     x.open('GET', url, true);
-    x.timeout = 10000;
+    x.timeout = timeout || 10000;
     for (var h in headers) if (headers.hasOwnProperty(h)) x.setRequestHeader(h, headers[h]);
     x.onreadystatechange = function () {
       if (x.readyState !== 4 || over) return;
@@ -157,7 +157,7 @@ var Data = (function () {
   /** Indexes in COINS of the coins that are on (the dollar only in Brazilian reais, where Binance lists it). */
   function activeCoins() {
     var out = [];
-    if (!Prefs.quotes()) return out;
+    if (!Prefs.quotes() || INDICATORS) return out;
     for (var i = 0; i < COINS.length; i++) if (Prefs.coin(i) && (i < 3 || CURRENCY === 'BRL')) out.push(i);
     return out;
   }
@@ -204,6 +204,42 @@ var Data = (function () {
         changed();
       });
     })(0);
+  }
+
+  // MARK: - Chile: UF and dollar in pesos (mindicador.cl)
+
+  /** In Chile the quotes show the UF and the dollar instead of crypto. Both are daily values. */
+  var INDICATORS = Place.country === 'CL';
+  var indicators = {uf: NaN, usd: NaN}, indicatorsAt = 0, indicatorsTry = 0, fetchingIndicators = false;
+
+  function indicatorsOn() { return INDICATORS && Prefs.quotes(); }
+
+  function parseIndicators(o) {
+    var uf = o && o.uf ? o.uf.valor : NaN, usd = o && o.dolar ? o.dolar.valor : NaN;
+    if (typeof uf !== 'number' || typeof usd !== 'number') return false;
+    indicators.uf = uf;
+    indicators.usd = usd;
+    return true;
+  }
+
+  (function () {
+    var p = stored('indicators');
+    if (p && parseIndicators(p)) indicatorsAt = p.at;
+  })();
+
+  function refreshIndicators() {
+    var now = Date.now();
+    if (!indicatorsOn() || fetchingIndicators || (now - indicatorsAt < 60 * 60000 && now >= indicatorsAt)) return;
+    if (now - indicatorsTry < 5 * 60000 && now >= indicatorsTry) return;
+    fetchingIndicators = true;
+    indicatorsTry = now;
+    get('https://mindicador.cl/api', {}, function (err, body) {
+      fetchingIndicators = false;
+      if (err || !parseIndicators(body)) return;
+      indicatorsAt = Date.now();
+      store('indicators', {uf: indicators.uf, usd: indicators.usd, at: indicatorsAt});
+      changed();
+    }, 40000);   // mindicador.cl takes 6 to 10 s to answer
   }
 
   // MARK: - Picks (TMDB)
@@ -505,14 +541,17 @@ var Data = (function () {
     onChange: function (fn) { listeners.push(fn); },
     setApps: function (apps) { installed = apps; },
     appFor: appFor,
-    refresh: function () { refreshWeather(); refreshPrices(); refreshRecs(); },
-    settingsChanged: function () { pricesAt = 0; refreshPrices(); changed(); },
+    refresh: function () { refreshWeather(); refreshPrices(); refreshIndicators(); refreshRecs(); },
+    settingsChanged: function () { pricesAt = 0; refreshPrices(); refreshIndicators(); changed(); },
     get weather() { return weather; },
     get weatherAt() { return weatherAt; },
     prices: prices,
     changes: changes,
     get pricesAt() { return pricesAt; },
     activeCoins: activeCoins,
+    indicatorsOn: indicatorsOn,
+    indicators: indicators,
+    get indicatorsAt() { return indicatorsAt; },
     hasKey: function () { return !!KEY; },
     recsError: function () { return recsError; },
     picks: now,
@@ -541,6 +580,13 @@ var Data = (function () {
       var s = SYMBOLS[CURRENCY] || CURRENCY + ' ';
       if (isNaN(v)) return s + '—';
       return s + (v >= 1000 ? fmt(v, 0) : fmt(v, 2));
+    },
+    /** Chilean pesos: "$41.199,85". */
+    pesos: function (v, digits) {
+      if (isNaN(v)) return '$—';
+      var s = v.toFixed(digits).split('.');
+      s[0] = s[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      return '$' + s.join(',');
     },
     change: function (v) { return isNaN(v) ? '' : (v >= 0 ? '+' : '−') + fmt(Math.abs(v), 1) + '%'; },
     degrees: function (v) {

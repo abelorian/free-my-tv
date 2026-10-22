@@ -407,6 +407,8 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 #prices .coin .n { position: absolute; left: 50px; top: 0; }
 #prices .coin .p { position: absolute; right: 128px; top: 1px; font-size: 26px; font-feature-settings: 'tnum'; }
 #prices .coin .c { position: absolute; right: 0; top: 2px; width: 108px; height: 34px; line-height: 34px; border-radius: 17px; text-align: center; font-size: 21px; font-weight: 600; font-feature-settings: 'tnum'; }
+#prices .flat .n { left: 2px; }
+#prices .flat .p { right: 0; }
 #prices .up { color: #248A3D; background: rgba(36, 138, 61, 0.2); }
 #prices .down { color: #D70015; background: rgba(215, 0, 21, 0.2); }
 .night #prices .coin svg { fill: rgba(255, 255, 255, 0.8); }

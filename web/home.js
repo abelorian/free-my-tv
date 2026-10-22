@@ -217,6 +217,10 @@
   function renderQuotes() {
     var q = $('quotes'), coins = Data.activeCoins();
     q.innerHTML = '';
+    if (Data.indicatorsOn()) {
+      el('span', 'q', q, 'UF ' + Data.pesos(Data.indicators.uf, 0));
+      el('span', 'q', q, 'USD ' + Data.pesos(Data.indicators.usd, 0));
+    }
     for (var i = 0; i < coins.length; i++) {
       var item = el('span', 'q', q);
       coin(coins[i], item);
@@ -355,7 +359,7 @@
     var d = $('drawer');
     var old = d.querySelectorAll('.panel');
     for (var o = 0; o < old.length; o++) d.removeChild(old[o]);
-    var wx = Prefs.weather(), coins = Data.activeCoins(), qt = coins.length > 0;
+    var wx = Prefs.weather(), coins = Data.activeCoins(), ind = Data.indicatorsOn(), qt = coins.length > 0 || ind;
     var split = 80 + 1760 * 0.585;
     if (wx) {
       var w = el('div', 'panel glass', d);
@@ -370,7 +374,19 @@
       var left = wx ? split + 16 : 80;
       q.style.left = left + 'px';
       q.style.width = (1840 - left) + 'px';
-      renderPrices(q, coins);
+      if (ind) renderIndicators(q); else renderPrices(q, coins);
+    }
+  }
+
+  function renderIndicators(card) {
+    el('div', 'head', card, tr('Indicadores', 'Indicators', 'Indicadores'));
+    el('div', 'side', card, Data.staleness(Data.indicatorsAt, 60 * 60000) || tr('valor do dia', 'daily value', 'valor del día'));
+    var rows = [['UF', Data.indicators.uf], [tr('Dólar', 'US dollar', 'Dólar'), Data.indicators.usd]];
+    for (var j = 0; j < rows.length; j++) {
+      var row = el('div', 'coin flat', card);
+      row.style.top = (86 + 52 * j) + 'px';
+      el('span', 'n', row, rows[j][0]);
+      el('span', 'p', row, Data.pesos(rows[j][1], 2));
     }
   }
 
