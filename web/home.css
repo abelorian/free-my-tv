@@ -483,6 +483,9 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 #saver.on { opacity: 1; visibility: visible; -webkit-transition-delay: 0s; transition-delay: 0s; }
 #saver .photo { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background-size: cover; background-position: center; opacity: 0; -webkit-transition: opacity 2.4s, -webkit-transform 24s linear; transition: opacity 2.4s, transform 24s linear; }
 #saver .photo.on { opacity: 1; }
+/* Meme templates: whole, to the right of the clock, on black */
+#saver .photo.meme { left: 640px; top: 40px; width: 1200px; height: 1000px; background-size: contain; background-repeat: no-repeat; }
+#saver.memes .shade { display: none; }
 #saver .shade { position: absolute; left: 0; right: 0; bottom: 0; height: 520px; background: -webkit-linear-gradient(top, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.55)); background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.55)); }
 #saver .clock {
   position: absolute;

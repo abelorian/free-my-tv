@@ -769,7 +769,7 @@
   var saverOn = false, idleAt = Date.now(), saverIndex = 0, saverTimer = 0, SAVER_AFTER = 5 * 60000;
 
   function showSaver() {
-    var photos = Data.showcase().filter(function (p) { return p.backdrop && Data.appFor(p.app); });
+    var photos = Data.showcase().filter(function (p) { return p.backdrop && Data.appFor(p.app); }), memes = Data.memes();
     saverOn = true;
     var s = $('saver');
     s.innerHTML = '';
@@ -782,12 +782,16 @@
     var front = a;
     function next() {
       if (!saverOn) return;
-      var p = photos.length ? photos[saverIndex++ % photos.length] : null;
+      var m = memes.length ? memes[Math.floor(Math.random() * memes.length)] : null;
+      var p = !m && photos.length ? photos[saverIndex++ % photos.length] : null;
       var back = front === a ? b : a;
-      if (p) {
-        back.style.backgroundImage = 'url(' + Data.image(p.backdrop, 'original') + ')';
+      function show() {
+        if (!saverOn) return;
+        setClass(s, 'memes', !!m);
+        setClass(back, 'meme', !!m);
+        back.style.backgroundImage = 'url(' + (m ? m.url : Data.image(p.backdrop, 'original')) + ')';
         back.style.webkitTransform = back.style.transform = 'scale(1.0)';
-        clock.lastChild.textContent = p.title;
+        clock.lastChild.textContent = m ? m.name : p.title;
         setTimeout(function () {
           setClass(back, 'on', true);
           setClass(front, 'on', false);
@@ -795,6 +799,8 @@
           front = back;
         }, 60);
       }
+      if (m) { var img = new Image(); img.onload = show; img.src = m.url; }   // fade in once it has loaded
+      else if (p) show();
       tickSaverClock(clock);
       saverTimer = setTimeout(next, 12000);
     }

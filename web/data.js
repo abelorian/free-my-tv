@@ -242,6 +242,40 @@ var Data = (function () {
     }, 40000);   // mindicador.cl takes 6 to 10 s to answer
   }
 
+  // MARK: - Meme templates for the screensaver (Imgflip: the 100 most used, without text)
+
+  var memeList = [], memesAt = 0, memesTry = 0, fetchingMemes = false;
+  var MEME_URL = /^https:\/\/i\.imgflip\.com\/[\w.-]+$/;
+
+  function parseMemes(o) {
+    var list = o && o.data && o.data.memes, out = [];
+    for (var i = 0; list && i < list.length; i++) {
+      if (typeof list[i].name === 'string' && MEME_URL.test(list[i].url || '')) out.push({name: list[i].name, url: list[i].url});
+    }
+    if (!out.length) return false;
+    memeList = out;
+    return true;
+  }
+
+  (function () {
+    var p = stored('memes');
+    if (p && parseMemes({data: {memes: p.list}})) memesAt = p.at;
+  })();
+
+  function refreshMemes() {
+    var now = Date.now();
+    if (fetchingMemes || (now - memesAt < 24 * 3600000 && now >= memesAt)) return;
+    if (now - memesTry < 10 * 60000 && now >= memesTry) return;
+    fetchingMemes = true;
+    memesTry = now;
+    get('https://api.imgflip.com/get_memes', {}, function (err, body) {
+      fetchingMemes = false;
+      if (err || !parseMemes(body)) return;
+      memesAt = Date.now();
+      store('memes', {list: memeList, at: memesAt});
+    }, 40000);
+  }
+
   // MARK: - Picks (TMDB)
 
   var KEY = (CONFIG.tmdbKey || '').trim();
@@ -541,7 +575,7 @@ var Data = (function () {
     onChange: function (fn) { listeners.push(fn); },
     setApps: function (apps) { installed = apps; },
     appFor: appFor,
-    refresh: function () { refreshWeather(); refreshPrices(); refreshIndicators(); refreshRecs(); },
+    refresh: function () { refreshWeather(); refreshPrices(); refreshIndicators(); refreshMemes(); refreshRecs(); },
     settingsChanged: function () { pricesAt = 0; refreshPrices(); refreshIndicators(); changed(); },
     get weather() { return weather; },
     get weatherAt() { return weatherAt; },
@@ -549,6 +583,7 @@ var Data = (function () {
     changes: changes,
     get pricesAt() { return pricesAt; },
     activeCoins: activeCoins,
+    memes: function () { return memeList; },
     indicatorsOn: indicatorsOn,
     indicators: indicators,
     get indicatorsAt() { return indicatorsAt; },
